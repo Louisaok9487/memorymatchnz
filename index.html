@@ -340,7 +340,7 @@
         // --- Supabase Configuration ---
         // Replaced with your actual Supabase project URL and Anon Key
         const SUPABASE_URL = 'https://miixidjkojjuwiikklvo.supabase.co';
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1paXhpZGprb2pqdXdpaWtrbHZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIxNzkzMjYsImV4cCI6MjA2Nzc1NTMyNn0.j5xBHAUginwitWKo_ADOXSHM0C-UWv8HLZgY8efmVeQ';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1paXhpZGprb2pqdXdpaWtrbHZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIxNzkzMjYsImV4cCI6MjA2Nzc1NTMyNn0.j5xBHAUginwitWKo_ADOXSHM0C-UWv8HLZgY8efV';
         let supabase; // Declare supabase here, initialize in window.onload
 
         // Array of New Zealand themed emojis for the cards (8 unique for a 4x4 grid)
@@ -675,14 +675,15 @@
             console.log("window.onload fired.");
             setupAudio();
 
-            // Initialize Supabase client here, after Supabase library is loaded
-            // This ensures the Supabase library is fully available
-            if (typeof Supabase !== 'undefined' && typeof Supabase.createClient === 'function') {
+            // Initialize Supabase client here, after the Supabase CDN script is loaded.
+            // This is the most common and reliable way for simple HTML files.
+            try {
                 supabase = Supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
                 console.log("Supabase client initialized.");
-            } else {
-                console.error("Supabase library is not defined or createClient is not a function. Leaderboard functionality may not work.");
-                gameMessage.textContent = "Leaderboard not available (Supabase error). Please check console.";
+            } catch (e) {
+                console.error("Error initializing Supabase client:", e);
+                // Display error message to the user if Supabase fails to initialize
+                gameMessage.textContent = "Leaderboard not available (Supabase initialization error). Please check console.";
             }
 
             initializeGame();
