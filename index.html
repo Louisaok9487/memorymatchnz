@@ -8,6 +8,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Tone.js CDN for sound effects -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.min.js"></script>
+    <!-- Supabase CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
     <style>
         body {
@@ -127,7 +129,7 @@
             text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
         }
 
-        .new-game-button {
+        .new-game-button, .leaderboard-button {
             background-color: #D4A64C; /* Muted gold/ochre for button */
             color: #4A4A4A; /* Dark grey text for button */
             font-weight: 700;
@@ -136,16 +138,107 @@
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
             transition: background-color 0.3s ease-in-out, transform 0.1s ease-in-out;
             border: 2px solid #F8F5EC; /* Light sandy/cream border */
+            margin-left: 0.5rem; /* Space between buttons */
         }
-        .new-game-button:hover {
+        .new-game-button:hover, .leaderboard-button:hover {
             background-color: #C3953B; /* Slightly darker gold on hover */
             transform: translateY(-1px);
         }
-        .new-game-button:active {
+        .new-game-button:active, .leaderboard-button:active {
             transform: translateY(0);
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
         }
 
+        /* Leaderboard Modal Styles */
+        .modal {
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.6); /* Darker overlay */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal-content {
+            background-color: #5C8C6B; /* Same as game container */
+            margin: auto;
+            padding: 2rem;
+            border: 4px solid #D4A64C;
+            border-radius: 1rem;
+            width: 80%;
+            max-width: 500px;
+            box-shadow: 0 15px 30px rgba(0,0,0,0.5);
+            position: relative;
+            color: #F8F5EC; /* Light text */
+        }
+        .close-button {
+            color: #F8F5EC;
+            position: absolute;
+            top: 10px;
+            right: 20px;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .close-button:hover,
+        .close-button:focus {
+            color: #D4A64C;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        .leaderboard-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+        }
+        .leaderboard-table th, .leaderboard-table td {
+            border: 1px solid #88B09F; /* Lighter green border */
+            padding: 0.75rem;
+            text-align: left;
+        }
+        .leaderboard-table th {
+            background-color: #88B09F; /* Muted sage green */
+            color: #F8F5EC;
+        }
+        .leaderboard-table tr:nth-child(even) {
+            background-color: #527A5F; /* Slightly darker green for alternating rows */
+        }
+
+        /* Input field for player name */
+        .player-name-input {
+            padding: 0.5rem;
+            border-radius: 0.5rem;
+            border: 2px solid #D4A64C;
+            background-color: #F8F5EC;
+            color: #4A4A4A;
+            margin-top: 1rem;
+            width: calc(100% - 1rem); /* Adjust width for padding */
+            max-width: 250px;
+            font-size: 1rem;
+        }
+        .submit-score-button {
+            background-color: #D4A64C;
+            color: #4A4A4A;
+            font-weight: 700;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            transition: background-color 0.3s ease-in-out, transform 0.1s ease-in-out;
+            border: 2px solid #F8F5EC;
+            margin-top: 1rem;
+        }
+        .submit-score-button:hover {
+            background-color: #C3953B;
+            transform: translateY(-1px);
+        }
+        .submit-score-button:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
 
         /* Responsive adjustments */
         @media (max-width: 768px) {
@@ -169,9 +262,13 @@
             .game-info-text {
                 font-size: 1rem;
             }
-            .new-game-button {
+            .new-game-button, .leaderboard-button {
                 padding: 0.4rem 0.8rem;
                 font-size: 0.9rem;
+            }
+            .modal-content {
+                width: 95%;
+                padding: 1.5rem;
             }
         }
         @media (max-width: 480px) {
@@ -201,9 +298,14 @@
         <h1 class="game-title">Kiwi Memory Match! NZ</h1>
         <div class="game-info">
             <div class="game-info-text">Turns: <span id="turns">0</span></div>
-            <button id="reset-button" class="new-game-button">
-                New Game
-            </button>
+            <div>
+                <button id="reset-button" class="new-game-button">
+                    New Game
+                </button>
+                <button id="leaderboard-button" class="leaderboard-button">
+                    Leaderboard
+                </button>
+            </div>
         </div>
         <div id="game-message" class="text-2xl font-bold mb-4 h-8"></div>
         <div id="game-grid" class="game-grid">
@@ -211,7 +313,36 @@
         </div>
     </div>
 
+    <!-- Leaderboard Modal -->
+    <div id="leaderboard-modal" class="modal hidden">
+        <div class="modal-content">
+            <span class="close-button" id="close-leaderboard-modal">&times;</span>
+            <h2 class="text-2xl font-bold mb-4 text-center">Leaderboard</h2>
+            <div id="leaderboard-list">
+                <!-- Leaderboard data will be loaded here -->
+                <p class="text-center">Loading leaderboard...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Name Input Modal (for game over) -->
+    <div id="name-input-modal" class="modal hidden">
+        <div class="modal-content text-center">
+            <h2 class="text-2xl font-bold mb-4">Game Over!</h2>
+            <p class="mb-4">You finished in <span id="final-turns" class="font-bold">0</span> turns!</p>
+            <p class="mb-2">Enter your name to save your score:</p>
+            <input type="text" id="player-name-input" class="player-name-input" placeholder="Your Name" maxlength="20">
+            <button id="submit-score-button" class="submit-score-button">Submit Score</button>
+        </div>
+    </div>
+
     <script>
+        // --- Supabase Configuration ---
+        // Replaced with your actual Supabase project URL and Anon Key
+        const SUPABASE_URL = 'https://miixidjkojjuwiikklvo.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1paXhpZGprb2pqdXdpaWtrbHZvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTIxNzkzMjYsImV4cCI6MjA2Nzc1NTMyNn0.j5xBHAUginwitWKo_ADOXSHM0C-UWv8HLZgY8efmVeQ';
+        let supabase; // Declare supabase here, initialize in window.onload
+
         // Array of New Zealand themed emojis for the cards (8 unique for a 4x4 grid)
         const nzEmojis = [
             '🌺', // Pohutukawa flower
@@ -234,6 +365,15 @@
         const turnsDisplay = document.getElementById('turns');
         const gameMessage = document.getElementById('game-message');
         const resetButton = document.getElementById('reset-button');
+        const leaderboardButton = document.getElementById('leaderboard-button');
+        const leaderboardModal = document.getElementById('leaderboard-modal');
+        const closeLeaderboardModal = document.getElementById('close-leaderboard-modal');
+        const leaderboardList = document.getElementById('leaderboard-list');
+
+        const nameInputModal = document.getElementById('name-input-modal');
+        const finalTurnsDisplay = document.getElementById('final-turns');
+        const playerNameInput = document.getElementById('player-name-input');
+        const submitScoreButton = document.getElementById('submit-score-button');
 
         // --- Sound Effects Setup (using Tone.js) ---
         let flipSynth, matchSynth, noMatchSynth, gameOverSynth, newGameSynth;
@@ -308,6 +448,11 @@
             turns = 0; // Reset turns
             gameMessage.textContent = '';
             turnsDisplay.textContent = '0'; // Update turns display
+
+            // Hide modals
+            leaderboardModal.classList.add('hidden');
+            nameInputModal.classList.add('hidden');
+            playerNameInput.value = ''; // Clear input field
 
             // Create pairs of emojis (8 unique emojis means 16 cards for a 4x4 grid)
             const gameEmojis = [...nzEmojis, ...nzEmojis]; // Duplicate for pairs
@@ -388,15 +533,158 @@
                 gameMessage.textContent = `Game Over! You finished in ${turns} turns!`;
                 if (gameOverSynth) gameOverSynth.triggerAttackRelease(["C4", "E4", "G4", "C5", "E5"], "1s"); // Play game over fanfare
                 canFlip = false; // Prevent any more flips
+
+                // Show name input modal
+                finalTurnsDisplay.textContent = turns;
+                nameInputModal.classList.remove('hidden');
+                playerNameInput.focus(); // Focus on the input field
             }
         }
 
-        // Event listener for the reset button
+        // --- Leaderboard Functions ---
+
+        async function saveScore(playerName, scoreTurns) {
+            try {
+                // Ensure supabase client is initialized before making a call
+                if (!supabase) {
+                    console.error("Supabase client is not initialized. Cannot save score.");
+                    gameMessage.textContent = 'Error: Leaderboard not available. Please refresh.';
+                    return;
+                }
+                const { data, error } = await supabase
+                    .from('leaderboard_mmnz')
+                    .insert([
+                        { player_name: playerName, turns: scoreTurns },
+                    ]);
+
+                if (error) {
+                    console.error('Error saving score:', error.message);
+                    gameMessage.textContent = 'Error saving score. Try again!';
+                } else {
+                    console.log('Score saved:', data);
+                    gameMessage.textContent = 'Score saved successfully!';
+                    // Optionally, show leaderboard immediately after saving
+                    fetchLeaderboard();
+                }
+            } catch (err) {
+                console.error('Unexpected error saving score:', err.message);
+                gameMessage.textContent = 'An unexpected error occurred!';
+            }
+        }
+
+        async function fetchLeaderboard() {
+            leaderboardList.innerHTML = '<p class="text-center">Loading leaderboard...</p>'; // Show loading message
+            try {
+                // Ensure supabase client is initialized before making a call
+                if (!supabase) {
+                    console.error("Supabase client is not initialized. Cannot fetch leaderboard.");
+                    leaderboardList.innerHTML = '<p class="text-center text-red-400">Leaderboard not available (Supabase error).</p>';
+                    return;
+                }
+                const { data, error } = await supabase
+                    .from('leaderboard_mmnz')
+                    .select('player_name, turns, created_at')
+                    .order('turns', { ascending: true }) // Order by fewest turns
+                    .limit(10); // Get top 10 scores
+
+                if (error) {
+                    console.error('Error fetching leaderboard:', error.message);
+                    leaderboardList.innerHTML = '<p class="text-center text-red-400">Failed to load leaderboard.</p>';
+                } else {
+                    displayLeaderboard(data);
+                }
+            } catch (err) {
+                console.error('Unexpected error fetching leaderboard:', err.message);
+                leaderboardList.innerHTML = '<p class="text-center text-red-400">An unexpected error occurred!</p>';
+            }
+        }
+
+        function displayLeaderboard(scores) {
+            if (scores.length === 0) {
+                leaderboardList.innerHTML = '<p class="text-center">No scores yet. Be the first!</p>';
+                return;
+            }
+
+            let tableHTML = `
+                <table class="leaderboard-table">
+                    <thead>
+                        <tr>
+                            <th>Rank</th>
+                            <th>Player</th>
+                            <th>Turns</th>
+                            <th>Date</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+            `;
+            scores.forEach((score, index) => {
+                const date = new Date(score.created_at).toLocaleDateString('en-NZ', {
+                    year: 'numeric', month: 'short', day: 'numeric'
+                });
+                tableHTML += `
+                    <tr>
+                        <td>${index + 1}</td>
+                        <td>${score.player_name}</td>
+                        <td>${score.turns}</td>
+                        <td>${date}</td>
+                    </tr>
+                `;
+            });
+            tableHTML += `
+                    </tbody>
+                </table>
+            `;
+            leaderboardList.innerHTML = tableHTML;
+        }
+
+
+        // --- Event Listeners ---
         resetButton.addEventListener('click', initializeGame);
+
+        leaderboardButton.addEventListener('click', () => {
+            leaderboardModal.classList.remove('hidden');
+            fetchLeaderboard(); // Fetch and display when modal is opened
+        });
+
+        closeLeaderboardModal.addEventListener('click', () => {
+            leaderboardModal.classList.add('hidden');
+        });
+
+        // Close modal if user clicks outside of it
+        window.addEventListener('click', (event) => {
+            if (event.target === leaderboardModal) {
+                leaderboardModal.classList.add('hidden');
+            }
+            if (event.target === nameInputModal) {
+                nameInputModal.classList.add('hidden');
+            }
+        });
+
+        submitScoreButton.addEventListener('click', () => {
+            const playerName = playerNameInput.value.trim();
+            if (playerName.length > 0) {
+                saveScore(playerName, turns);
+                nameInputModal.classList.add('hidden');
+            } else {
+                gameMessage.textContent = 'Please enter your name!';
+            }
+        });
 
         // Initialize Tone.js synths and then the game when the page loads
         window.onload = function() {
+            console.log("window.onload fired.");
             setupAudio();
+
+            // Initialize Supabase client here, after Supabase library is loaded
+            // This ensures the Supabase library is fully available
+            if (typeof Supabase !== 'undefined' && typeof Supabase.createClient === 'function') {
+                supabase = Supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+                console.log("Supabase client initialized.");
+            } else {
+                console.error("Supabase library is not defined or createClient is not a function. Leaderboard functionality may not work.");
+                gameMessage.textContent = "Leaderboard not available (Supabase error). Please check console.";
+            }
+
             initializeGame();
         };
 
