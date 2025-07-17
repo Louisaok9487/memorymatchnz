@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kiwi Memory Match! NZ</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Tone.js CDN for sound effects -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            /* Warm, natural background inspired by NZ landscapes */
+            background-color: #F8F5EC; /* Light sandy/cream */
+            background-image: radial-gradient(circle at top left, #F8F5EC, #E0DED3 75%); /* Subtle gradient */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        .game-container {
+            background-color: #5C8C6B; /* Deep, natural green (like native bush) */
+            border: 4px solid #D4A64C; /* Muted gold/ochre for warmth */
+            border-radius: 1rem;
+            box-shadow: 0 12px 25px rgba(0, 0, 0, 0.25); /* Slightly stronger, but soft shadow */
+            padding: 2rem;
+            max-width: 650px;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .game-title {
+            color: #F8F5EC; /* Light sandy/cream for title to contrast with green */
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.2); /* Clearer text shadow */
+        }
+        .game-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            max-width: 500px;
+            margin-bottom: 1.5rem;
+            padding: 0 1rem;
+        }
+        .game-info-text {
+            color: #F8F5EC; /* Light sandy/cream for info text */
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+        .game-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 0.75rem;
+            width: 100%;
+            max-width: 500px;
+            margin-top: 0.5rem;
+            margin-bottom: 2rem;
+        }
+        .card {
+            background-color: #88B09F; /* Muted sage green for card back */
+            height: 100px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            font-size: 2.5rem;
+            color: #ffffff; /* Question mark colour */
+            transition: transform 0.4s ease-out; /* Snappier flip transition */
+            transform-style: preserve-3d;
+            position: relative;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+            border: 3px solid #D4A64C; /* Muted gold/ochre border for cards */
+        }
+        .card-inner {
+            width: 100%;
+            height: 100%;
+            position: absolute;
+            transform-style: preserve-3d;
+            transition: transform 0.4s; /* Ensure inner transition matches card */
+        }
+        .card.flipped .card-inner {
+            transform: rotateY(180deg);
+        }
+        /* Add a slight scale effect during the flip for dynamism */
+        .card.flipping {
+            transform: scale(0.95);
+        }
+
+        .card-face, .card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            -webkit-backface-visibility: hidden; /* Safari */
+            backface-visibility: hidden; /* Crucial for flip animation */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 0.5rem;
+            box-sizing: border-box;
+            font-size: 3rem;
+        }
+        .card-face {
+            background-color: #F8F5EC; /* Light sandy/cream for card face */
+            color: #4A4A4A; /* Dark grey for default emoji colour */
+            transform: rotateY(180deg);
+        }
+        .card-back {
+            background-color: #88B09F; /* Muted sage green for card back */
+            color: #ffffff;
+        }
+        /* No specific background change for matched cards, they just stay flipped */
+        .card.matched .card-face {
+            background-color: #F8F5EC; /* Keep same as flipped face */
+        }
+
+        #game-message {
+            color: #D4A64C; /* Muted gold/ochre for game messages */
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+        }
+
+        .new-game-button {
+            background-color: #D4A64C; /* Muted gold/ochre for button */
+            color: #4A4A4A; /* Dark grey text for button */
+            font-weight: 700;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            transition: background-color 0.3s ease-in-out, transform 0.1s ease-in-out;
+            border: 2px solid #F8F5EC; /* Light sandy/cream border */
+        }
+        .new-game-button:hover {
+            background-color: #C3953B; /* Slightly darker gold on hover */
+            transform: translateY(-1px);
+        }
+        .new-game-button:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .game-grid {
+                grid-template-columns: repeat(4, 1fr);
+                max-width: 400px;
+            }
+            .card {
+                height: 80px;
+                font-size: 2rem;
+            }
+            .card-face, .card-back {
+                font-size: 2.5rem;
+            }
+            .game-container {
+                padding: 1.5rem;
+            }
+            .game-title {
+                font-size: 2rem;
+            }
+            .game-info-text {
+                font-size: 1rem;
+            }
+            .new-game-button {
+                padding: 0.4rem 0.8rem;
+                font-size: 0.9rem;
+            }
+        }
+        @media (max-width: 480px) {
+            .game-grid {
+                grid-template-columns: repeat(4, 1fr);
+                gap: 0.5rem;
+                max-width: 320px;
+            }
+            .card {
+                height: 65px;
+                font-size: 1.8rem;
+            }
+            .card-face, .card-back {
+                font-size: 2rem;
+            }
+            .game-container {
+                padding: 1rem;
+            }
+            .game-title {
+                font-size: 1.8rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1 class="game-title">Kiwi Memory Match! NZ</h1>
+        <div class="game-info">
+            <div class="game-info-text">Turns: <span id="turns">0</span></div>
+            <button id="reset-button" class="new-game-button">
+                New Game
+            </button>
+        </div>
+        <div id="game-message" class="text-2xl font-bold mb-4 h-8"></div>
+        <div id="game-grid" class="game-grid">
+            <!-- Cards will be inserted here by JavaScript -->
+        </div>
+    </div>
+
+    <script>
+        // Array of New Zealand themed emojis for the cards (8 unique for a 4x4 grid)
+        const nzEmojis = [
+            '🌺', // Pohutukawa flower
+            '🌀', // Cyclone/Swirl (representing weather or a specific NZ symbol)
+            '🏉', // Rugby ball (All Blacks)
+            '🌊', // Ocean wave
+            '🌳', // Native tree (e.g., Kauri)
+            '🐦', // Native bird (e.g., Tūī, Fantail)
+            '🍰', // Pavlova
+            '🐑'  // Sheep
+        ];
+
+        let cards = []; // Stores all card objects
+        let flippedCards = []; // Stores currently flipped cards (max 2)
+        let matchedPairs = 0; // Counts the number of matched pairs
+        let canFlip = true; // Prevents flipping more than two cards at once
+        let turns = 0; // Counts the number of turns (two cards flipped)
+
+        const gameGrid = document.getElementById('game-grid');
+        const turnsDisplay = document.getElementById('turns');
+        const gameMessage = document.getElementById('game-message');
+        const resetButton = document.getElementById('reset-button');
+
+        // --- Sound Effects Setup (using Tone.js) ---
+        let flipSynth, matchSynth, noMatchSynth, gameOverSynth, newGameSynth;
+
+        // Function to initialise Tone.js synths
+        function setupAudio() {
+            // Basic polysynth for card flips
+            flipSynth = new Tone.PolySynth(Tone.Synth, {
+                oscillator: { type: "sine" },
+                envelope: { attack: 0.01, decay: 0.1, sustain: 0.05, release: 0.1 }
+            }).toDestination();
+
+            // Chime-like sound for matches
+            matchSynth = new Tone.Synth({
+                oscillator: { type: "triangle" },
+                envelope: { attack: 0.02, decay: 0.3, sustain: 0.1, release: 0.5 },
+                volume: -10
+            }).toDestination();
+
+            // Short, low buzz for no match
+            noMatchSynth = new Tone.Synth({
+                oscillator: { type: "sawtooth" },
+                envelope: { attack: 0.01, decay: 0.1, sustain: 0.01, release: 0.1 },
+                volume: -15
+            }).toDestination();
+
+            // Simple fanfare for game over
+            gameOverSynth = new Tone.PolySynth(Tone.Synth, {
+                oscillator: { type: "square" },
+                envelope: { attack: 0.05, decay: 0.2, sustain: 0.1, release: 0.3 },
+                volume: -5
+            }).toDestination();
+
+            // Quick whoosh for new game
+            newGameSynth = new Tone.NoiseSynth({
+                noise: { type: "white" },
+                envelope: { attack: 0.01, decay: 0.2, sustain: 0, release: 0.05 },
+                volume: -10
+            }).toDestination();
+        }
+
+        // Start audio context on first user interaction (important for browsers)
+        document.body.addEventListener('click', () => {
+            if (Tone.context.state !== 'running') {
+                Tone.start();
+                console.log('Audio context started');
+            }
+        }, { once: true }); // Only run once
+
+
+        // Function to shuffle an array (Fisher-Yates algorithm)
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        // Function to initialise the game
+        function initializeGame() {
+            // Play new game sound
+            if (newGameSynth) newGameSynth.triggerAttackRelease("8n");
+
+            // Clear previous game state
+            gameGrid.innerHTML = '';
+            cards = [];
+            flippedCards = [];
+            matchedPairs = 0;
+            canFlip = true;
+            turns = 0; // Reset turns
+            gameMessage.textContent = '';
+            turnsDisplay.textContent = '0'; // Update turns display
+
+            // Create pairs of emojis (8 unique emojis means 16 cards for a 4x4 grid)
+            const gameEmojis = [...nzEmojis, ...nzEmojis]; // Duplicate for pairs
+            const shuffledEmojis = shuffle(gameEmojis); // Shuffle the emojis
+
+            // Create card elements
+            shuffledEmojis.forEach((emoji, index) => {
+                const cardElement = document.createElement('div');
+                cardElement.classList.add('card', 'relative', 'rounded-md', 'cursor-pointer', 'select-none');
+                cardElement.dataset.emoji = emoji; // Store the emoji on the dataset
+                cardElement.dataset.index = index; // Store the original index
+
+                cardElement.innerHTML = `
+                    <div class="card-inner">
+                        <div class="card-face">${emoji}</div>
+                        <div class="card-back">?</div>
+                    </div>
+                `;
+                cardElement.addEventListener('click', () => flipCard(cardElement));
+                gameGrid.appendChild(cardElement);
+                cards.push(cardElement); // Add to cards array
+            });
+        }
+
+        // Function to handle card flipping logic
+        function flipCard(cardElement) {
+            // If already matched, already flipped (and not the current flipped card), or cannot flip, do nothing
+            if (!canFlip || cardElement.classList.contains('flipped') || cardElement.classList.contains('matched')) {
+                return;
+            }
+
+            // Play flip sound
+            if (flipSynth) flipSynth.triggerAttackRelease("C4", "16n");
+
+            cardElement.classList.add('flipped');
+            // Add a temporary class for the scale animation during the flip
+            cardElement.classList.add('flipping');
+            // Remove the 'flipping' class after the transition
+            setTimeout(() => {
+                cardElement.classList.remove('flipping');
+            }, 400); // Match this to the transition duration
+
+            flippedCards.push(cardElement);
+
+            // If two cards are flipped
+            if (flippedCards.length === 2) {
+                canFlip = false; // Prevent further flips
+                turns++; // Increment turns after two cards are flipped
+                turnsDisplay.textContent = turns; // Update turns display
+
+                const [card1, card2] = flippedCards;
+
+                // Check if emojis match
+                if (card1.dataset.emoji === card2.dataset.emoji) {
+                    // Match found
+                    gameMessage.textContent = 'Match!';
+                    if (matchSynth) matchSynth.triggerAttackRelease("G5", "8n"); // Play match sound
+                    card1.classList.add('matched');
+                    card2.classList.add('matched');
+                    matchedPairs++;
+
+                    // Clear flipped cards after a short delay to allow animation to complete
+                    setTimeout(() => {
+                        flippedCards = [];
+                        canFlip = true;
+                        gameMessage.textContent = ''; // Clear match message
+                        checkGameOver();
+                    }, 600); // Shorter delay for match
+                } else {
+                    // No match
+                    gameMessage.textContent = 'No Match, try again!';
+                    if (noMatchSynth) noMatchSynth.triggerAttackRelease("C2", "8n"); // Play no match sound
+                    setTimeout(() => {
+                        card1.classList.remove('flipped');
+                        card2.classList.remove('flipped');
+                        flippedCards = [];
+                        canFlip = true;
+                        gameMessage.textContent = ''; // Clear no match message
+                    }, 1200); // Longer delay for no match
+                }
+            }
+        }
+
+        // Function to check if the game is over
+        function checkGameOver() {
+            if (matchedPairs === nzEmojis.length) { // All 8 pairs found
+                gameMessage.textContent = `Game Over! You finished in ${turns} turns!`;
+                if (gameOverSynth) gameOverSynth.triggerAttackRelease(["C4", "E4", "G4", "C5"], "1s"); // Play game over fanfare
+                canFlip = false; // Prevent any more flips
+            }
+        }
+
+        // Event listener for the reset button
+        resetButton.addEventListener('click', initializeGame);
+
+        // Initialize Tone.js synths and then the game when the page loads
+        window.onload = function() {
+            setupAudio();
+            initializeGame();
+        };
+
+    </script>
+</body>
+</html>
